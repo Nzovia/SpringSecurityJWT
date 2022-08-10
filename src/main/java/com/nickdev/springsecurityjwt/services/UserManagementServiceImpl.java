@@ -6,18 +6,45 @@ import com.nickdev.springsecurityjwt.repositories.RolesRepository;
 import com.nickdev.springsecurityjwt.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 @Transactional  //makes sure that everything is saved to the DB without calling the repositories
 @Slf4j
-public class UserManagementServiceImpl implements UserManagementService {
+public class UserManagementServiceImpl implements UserManagementService, UserDetailsService {
     private final UserRepository userRepo;
     private final RolesRepository rolesRepo;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+
+        Users user = userRepo.findByUserName(username);
+
+
+        if(user == null){
+            log.error("Username not found");
+            throw new UsernameNotFoundException("Username not found");
+        }else{
+            log.info("Username found successfully {}", username);
+        }
+
+        Collection<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        user.getRoles().forEach(roles -> {authorities.add(
+                new SimpleGrantedAuthority(roles.getRoleName()));
+        });
+        return new User(user.getUserName(), user.getPassword(), authorities);  //extracted from springFramework.Security.core.userDetails.user
+    }
 
 
     @Override
@@ -55,4 +82,5 @@ public class UserManagementServiceImpl implements UserManagementService {
 
         //In situations where data is alot you fetch a whole list therefore need for Pagination
     }
+
 }
